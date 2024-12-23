@@ -1,0 +1,14 @@
+[
+    {
+      "ParameterKey": "DBUsername",
+      "ParameterValue": "your_db_username"
+    },
+    {
+      "ParameterKey": "DBPassword", 
+      "ParameterValue": "your_db_password"
+    },
+    {
+      "ParameterKey": "S3BucketName",
+      "ParameterValue": "your_s3_bucket_name"
+    }
+  ]
