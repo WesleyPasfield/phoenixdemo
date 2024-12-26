@@ -1,5 +1,11 @@
-phoenix==1.0.0
+pphoenix==1.0.0
 boto3==1.26.137
 psycopg2-binary==2.9.5
 anthropic==0.3.0
 openai==0.27.0
+pandas>=1.5.0
+numpy>=1.23.0
+jupyter>=1.0.0
+python-dotenv>=0.19.0
+requests>=2.28.0
+typing-extensions>=4.5.0

@@ -1,80 +1,88 @@
-# cloudformation.yaml
 AWSTemplateFormatVersion: '2010-09-09'
 Description: 'LLM Evaluation Infrastructure'
 
 Parameters:
- DBUsername:
-   Type: String
- DBPassword:
-   Type: String
-   NoEcho: true
+  DBUsername:
+    Type: String
+  DBPassword:
+    Type: String
+    NoEcho: true
+
 
 Resources:
- EvalBucket:
-   Type: AWS::S3::Bucket
-   Properties:
-     BucketName: !Ref S3BucketName
-     VersioningConfiguration:
-       Status: Enabled
+  EvalBucket:
+    Type: AWS::S3::Bucket
+    Properties:
+      BucketName: !Sub "${AWS::StackName}-${AWS::AccountId}-eval"
+      VersioningConfiguration:
+        Status: Enabled
 
- RDSSecurityGroup:
-   Type: AWS::EC2::SecurityGroup
-   Properties:
-     GroupDescription: RDS SG
-     SecurityGroupIngress:
-       - IpProtocol: tcp
-         FromPort: 5432
-         ToPort: 5432
-         CidrIp: 0.0.0.0/0
+  RDSSecurityGroup:
+    Type: AWS::EC2::SecurityGroup
+    Properties:
+      GroupDescription: RDS SG
+      SecurityGroupIngress:
+        - IpProtocol: tcp
+          FromPort: 5432
+          ToPort: 5432
+          CidrIp: 0.0.0.0/0
 
- EvalDatabase:
-   Type: AWS::RDS::DBInstance
-   Properties:
-     DBName: llm_eval
-     Engine: postgres
-     MasterUsername: !Ref DBUsername  
-     MasterUserPassword: !Ref DBPassword
-     DBInstanceClass: db.t3.micro
-     AllocatedStorage: 20
-     VPCSecurityGroups: 
-       - !GetAtt RDSSecurityGroup.GroupId
-     PubliclyAccessible: true
-# Role used to execute process
-Resources:
- EvalServiceRole:
-   Type: AWS::IAM::Role
-   Properties:
-     AssumeRolePolicyDocument:
-       Version: '2012-10-17'
-       Statement:
-         - Effect: Allow
-           Principal:
-             Service: ecs-tasks.amazonaws.com
-           Action: sts:AssumeRole
-     ManagedPolicyArns:
-       - arn:aws:iam::aws:policy/service-role/AmazonECSTaskExecutionRolePolicy
-     Policies:
-       - PolicyName: EvalServicePolicy
-         PolicyDocument:
-           Version: '2012-10-17'
-           Statement:
-             - Effect: Allow
-               Action:
-                 - s3:PutObject
-                 - s3:GetObject
-                 - s3:ListBucket
-               Resource: 
-                 - !GetAtt EvalBucket.Arn
-                 - !Sub "${EvalBucket.Arn}/*"
-             - Effect: Allow
-               Action:
-                 - secretsmanager:GetSecretValue
-               Resource: !Sub "arn:aws:secretsmanager:${AWS::Region}:${AWS::AccountId}:secret:llm-eval/*"
+  EvalDBCluster:
+    Type: AWS::RDS::DBCluster
+    Properties:
+      Engine: aurora-postgresql
+      EngineMode: provisioned
+      EngineVersion: 14.6
+      ServerlessV2ScalingConfiguration:
+        MinCapacity: 0.5
+        MaxCapacity: 1.0
+      DatabaseName: llm_eval
+      MasterUsername: !Ref DBUsername
+      MasterUserPassword: !Ref DBPassword
+      VpcSecurityGroupIds:
+        - !GetAtt RDSSecurityGroup.GroupId
+
+  EvalDBInstance:
+    Type: AWS::RDS::DBInstance
+    Properties:
+      Engine: aurora-postgresql
+      DBClusterIdentifier: !Ref EvalDBCluster
+      DBInstanceClass: db.serverless
+
+  EvalServiceRole:
+    Type: AWS::IAM::Role
+    Properties:
+      AssumeRolePolicyDocument:
+        Version: '2012-10-17'
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service: ecs-tasks.amazonaws.com
+            Action: sts:AssumeRole
+      ManagedPolicyArns:
+        - arn:aws:iam::aws:policy/service-role/AmazonECSTaskExecutionRolePolicy
+      Policies:
+        - PolicyName: EvalServicePolicy
+          PolicyDocument:
+            Version: '2012-10-17'
+            Statement:
+              - Effect: Allow
+                Action:
+                  - s3:PutObject
+                  - s3:GetObject
+                  - s3:ListBucket
+                Resource: 
+                  - !GetAtt EvalBucket.Arn
+                  - !Sub "${EvalBucket.Arn}/*"
+              - Effect: Allow
+                Action:
+                  - secretsmanager:GetSecretValue
+                Resource: !Sub "arn:aws:secretsmanager:${AWS::Region}:${AWS::AccountId}:secret:llm-eval/*"
 
 Outputs:
- RoleArn:
-   Value: !GetAtt EvalServiceRole.Arn
- BucketName:
-   Value: !Ref EvalBucket
- DBEndpoint:  
-   Value: !GetAtt EvalDatabase.Endpoint.Address
+  RoleArn:
+    Value: !GetAtt EvalServiceRole.Arn
+  BucketName:
+    Value: !Ref EvalBucket
+  DBEndpoint:  
+    Value: !GetAtt EvalDBCluster.Endpoint.Address
