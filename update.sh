@@ -3,7 +3,7 @@
 STACK_NAME="llm-eval"
 TEMPLATE_FILE="template.yaml"
 
-aws cloudformation create-stack \
+aws cloudformation update-stack \
  --stack-name $STACK_NAME \
  --template-body file://infrastructure/$TEMPLATE_FILE \
  --capabilities CAPABILITY_IAM
