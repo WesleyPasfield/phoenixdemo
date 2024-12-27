@@ -1,20 +1,22 @@
-FROM python:3.11-slim
-WORKDIR /app
+FROM python:3.11-bullseye
 
 RUN apt-get update && apt-get install -y \
-    gcc \
-    libpq-dev \
-    cmake \
-    libthrift-dev \
-    libboost-dev \
-    libssl-dev \
-    && rm -rf /var/lib/apt/lists/*
+git \
+curl \
+&& rm -rf /var/lib/apt/lists/*
 
-COPY requirements.txt .
-RUN pip install --no-cache-dir --only-binary :all: pyarrow
+RUN curl "https://awscli.amazonaws.com/awscli-exe-linux-x86_64.zip" -o "awscliv2.zip" \
+&& unzip awscliv2.zip \
+&& ./aws/install \
+&& rm -rf aws awscliv2.zip
+
+WORKDIR /app
+COPY . .
+RUN pip uninstall -y numpy pandas
 RUN pip install --no-cache-dir -r requirements.txt
+RUN chmod +x infrastructure/deploy.sh infrastructure/update.sh
 
-COPY app/ ./app/
-COPY .env .
-ENV PYTHONPATH=/app
-CMD ["python", "app/run_evaluation.py"]
+ENV PYTHONUNBUFFERED=1
+ENV AWS_DEFAULT_REGION=us-west-2
+
+CMD ["python", "src/run_evaluation.py"]
