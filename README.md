@@ -9,8 +9,8 @@ A system for evaluating LLM outputs using manual reviews and automated evaluatio
 3. Multi-model consensus evaluations
 4. Support for various evaluation types:
 
-    - Toxicity
-    - Hallucination
+    - Toxicity (built-in)
+    - Hallucination (build-in)
     - Internal Policy Compliance
     - Functional Accuracy
 
@@ -36,7 +36,7 @@ cd infrastructure
 
 3. Build Docker image:
 ```bash
-docker build -t llm-eval .
+docker build -t phoenix-demo .
 ```
 
 ## Configuration
@@ -44,6 +44,8 @@ docker build -t llm-eval .
 - Note the AWS portion of this hasn't been tested via docker, it works from the CLI locally
 
 ## Usage
+
+Note all of these should involve dynamically passing this information from end-user inputs
 
 ### Running Manual Evaluations
 
@@ -159,6 +161,8 @@ docker run \
 ## Manual Steps
 
 - Set up OpenAI & Anthropic credentials in AWS Secrets
+- Configure AWS resources in docker container so it will execute
+- Update so actual inputs are passed to the run_evaluation function rather than the example ones in the existing script
 - _get_api_keys() might have some strangeness as I needed to make a slight change to the secretstring returned
 - I'm launching an S3 bucket that is referenced throughout - that could be hard coded if not able to use cloudformation in this capacity
 - This process uses 4 metrics - any additions or changes would require some manual updates, notably around the parsing of the output to ensure consistency of scores:
